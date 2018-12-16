@@ -209,6 +209,7 @@ void JaccardSimilarity(int docid, int veins, map<int, set<int> >& docsAsShingleS
         tp.push_back(iterator->first);
         cout << endl << "Shingles del Document " << iterator->first << " amb Jaccard Similarity " << iterator->second << "%" << endl;
         iterator++;
+        top++;
     }
 
     double elapsed_secs = double (clock()-t0) / CLOCKS_PER_SEC;
@@ -280,6 +281,7 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
         cout << endl <<"Signatures del Document " << it->first << " amb Jaccard Similarity " << it->second << "%" << endl;
         sigpos.push_back(it->first);
         ++it;
+        top++;
     }
 
     set<int> s(tp.begin(), tp.end());
