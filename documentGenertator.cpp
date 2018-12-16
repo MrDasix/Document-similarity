@@ -1,19 +1,15 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <stdlib.h> 
-#include <time.h>   
-#include <unistd.h>
-#include <stdio.h>
-#include <limits.h>
-#include <algorithm>
 #include <string>
+#include "random.hpp"
 
+using Random = effolkronium::random_static;
 using namespace std;
 
 vector<string> words;
 const int numFiles = 20;
-const int docLength = 200;
+const int docLength = 50;
 
 void crearFiles(){
         for(int i = 0; i < numFiles; i++){
@@ -22,7 +18,7 @@ void crearFiles(){
 
                 for(int j = 0; j < docLength; j++){
                         if(j != 0) outfile << " ";
-                        int ran = rand() % 50 + 1;
+                        int ran = Random::get() % 50 + 1;
                         outfile << words[ran];
                 }
                 outfile.close();
@@ -31,7 +27,6 @@ void crearFiles(){
 
 int main ()
 {                       
-       srand (time(NULL));
        ifstream input( "paraules.txt" );
        for(string line; getline( input, line ); )
         {

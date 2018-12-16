@@ -1,4 +1,4 @@
-1) g++ documentGenertator.cpp -o generator.x
+1) g++ -std=c++11 documentGenertator.cpp -o generator.x
 2) g++ -std=c++17 A.cpp -o A.x -lstdc++fs
 3) ./generator.x // Genera els 20 documents
 4) ./A.x // Executa el programa calulant el Jacard Similarity,LSH...

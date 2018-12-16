@@ -19,10 +19,12 @@ using Random = effolkronium::random_static;
 namespace fs = std::experimental::filesystem::v1;
 using namespace std;
 
-const bool DEBUG = 0;
-const int shingleSize = 2 ;
+const bool DEBUG = 0; //Si vols treure missatges dels documents per pantalla
+const bool SHINGLE_WORDS = 0; //1 si es volen agafar com a shingel paraules, 0 si es vol agafar com a shingle caracters
+const int shingleSize = 5;
 
-map<int,vector<string> > docsInfo;
+map<int,vector<string> > docsInfo_String;
+map<int,string > docsInfo_Char;
 map<int, set<string> > docsAsShingleSets_String;
 map<int, set<int> > docsAsShingleSets;
 set<int> docNames;
@@ -64,12 +66,19 @@ void llegirDocuments(){
 		str.erase(remove(str.begin(), str.end(), '\n'), str.end());
 		str.erase(remove(str.begin(), str.end(), '\r'), str.end());
 
-		docsInfo[id] = split(str , ' ');		
+                if(SHINGLE_WORDS){
+		        docsInfo_String[id] = split(str , ' ');	
+                }else{
+                        //str.erase(remove(str.begin(), str.end(), ' '), str.end());
+                        docsInfo_Char[id] = str;
+                }	
 
                 if(DEBUG){
                         cout << "Document " <<  id << " has all this words: " << endl;
-                        for(int j = 0; j < docsInfo[id].size(); j++){
-                                cout << docsInfo[id][j] <<  endl;
+                        if(SHINGLE_WORDS){
+                                for(int j = 0; j < docsInfo_String[id].size(); j++){
+                                        cout << docsInfo_String[id][j] <<  endl;
+                                }
                         }
                         cout << endl << endl;
                 }
@@ -79,21 +88,39 @@ void llegirDocuments(){
 
 void convertirShingles(){
 	for(int i= 0; i < docNames.size(); i++){
-		for(int k =0 ; k < docsInfo[i].size(); k++){
-			if(k+shingleSize <= docsInfo[i].size()){			
-				string shingle = "";
-				for(int j=0; j < shingleSize; j++){
-					if(j != 0 ) shingle += " ";
-					shingle += docsInfo[i][k+j];
-				}
-				docsAsShingleSets_String[i].insert(shingle);//string shingle
+                if(SHINGLE_WORDS){
+                        for(int k =0 ; k < docsInfo_String[i].size(); k++){
+                                if(k+shingleSize <= docsInfo_String[i].size()){			
+                                        string shingle = "";
+                                        for(int j=0; j < shingleSize; j++){
+                                                //if(j != 0 ) shingle += " ";
+                                                shingle += docsInfo_String[i][k+j];
+                                        }
+                                        docsAsShingleSets_String[i].insert(shingle);//string shingle
 
-                                hash<std::string> hasher;
-                                unsigned long hashed = hasher(shingle);
-                                int abbreviated_hash = hashed & INT_MAX;
-                                docsAsShingleSets[i].insert(abbreviated_hash);//int hashed shingle
-			}
-		}	
+                                        hash<std::string> hasher;
+                                        unsigned long hashed = hasher(shingle);
+                                        int abbreviated_hash = hashed & INT_MAX;
+                                        docsAsShingleSets[i].insert(abbreviated_hash);//int hashed shingle
+                                }
+                        }	
+                }else{
+                        for(int k =0 ; k < docsInfo_Char[i].size(); k++){
+                                if(k+shingleSize <= docsInfo_Char[i].size()){			
+                                        string shingle = "";
+                                        for(int j=0; j < shingleSize; j++){
+                                                //if(j != 0 ) shingle += " ";
+                                                shingle += docsInfo_Char[i][k+j];
+                                        }
+                                        docsAsShingleSets_String[i].insert(shingle);//string shingle
+
+                                        hash<std::string> hasher;
+                                        unsigned long hashed = hasher(shingle);
+                                        int abbreviated_hash = hashed & INT_MAX;
+                                        docsAsShingleSets[i].insert(abbreviated_hash);//int hashed shingle
+                                }
+                        }
+                }
 
                 if(DEBUG){
                         cout << "Document " <<  i << " has all this shingles: " << endl;
@@ -239,14 +266,13 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
     cout << endl <<"Jaccard Similarity entre signatures" << endl;
     cout << endl <<"Els valors mostrats son els valors estimats de Jaccard Similarity" << endl;
 
+
     int i = docid;
     vector<int> signature1 = signatures[i];
-
     map<int, int, comp2> veinsDelDocI;  // veins ordenats per major percentatge de similitud
-
     map<int, set<int> >::iterator itj = docsAsShingleSets.begin();
 
-    while(itj != docsAsShingleSets.end()) {
+	while(itj != docsAsShingleSets.end()) {
         if (i != itj->first) {
             vector<int> signature2 = signatures[itj->first];
             // contem quantes posicions del minhash son iguals
@@ -273,6 +299,7 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
                 }
             }
         }
+		++itj;
     }
 
     vector<int> sigpos;
@@ -334,7 +361,6 @@ vector<int> obteCoeficients(int n) {
 void minHashing() {
     int primerPrimer = getPrimerPrimer();
     vector<int> coeficients1 = obteCoeficients(numHashes), coeficients2 = obteCoeficients(numHashes);
-    vector<vector<int>> signatures;
     for(int docId: docNames){
         set<int> shingles = docsAsShingleSets[docId];
         vector<int> signatura;
@@ -424,8 +450,10 @@ set<pair<int,int>> getSimilarDocs(vector<vector<int>> docs, map<int, set<int>> s
 
 void LHS(){
     int band_size;
-    do cin >> band_size;
-    while(band_size > 0 and band_size <= numHashes);
+    do{ 
+		cout << "introdueix el band size" << endl;
+		cin >> band_size;
+	}while(band_size > 0 and band_size <= numHashes);
     vector<int> tlist;
     set<pair<int,int>> similar_docs = getSimilarDocs(signatures, docsAsShingleSets, 0, numHashes, band_size);
 
@@ -441,12 +469,14 @@ int main()
 	llegirDocuments();
 	convertirShingles();
 
-        minHashing();
+	minHashing();
 
-        int docid;
-        int veins;
+	int docid;
+	int veins;
 
-        inputJaccardSimilarity(docid, veins, docNames.size());
-        JaccardSimilarity(docid, veins, docsAsShingleSets, docNames, tp);
-        displayAllSignaturesISimilaritat(signatures, docid, veins, docsAsShingleSets, tp, numHashes);
+	inputJaccardSimilarity(docid, veins, docNames.size());
+	JaccardSimilarity(docid, veins, docsAsShingleSets, docNames, tp);
+	displayAllSignaturesISimilaritat(signatures, docid, veins, docsAsShingleSets, tp, numHashes);
+
+	LHS();
 }
