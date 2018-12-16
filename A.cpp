@@ -205,7 +205,7 @@ void JaccardSimilarity(int docid, int veins, map<int, set<int> >& docsAsShingleS
     cout << endl << "Els top " << veins << " documents més similars al document " << iti->first << " son: " << endl;
     int top = 0;
     map<int,int>::iterator iterator= veinsDelDocI.begin();
-    while (iterator != veinsDelDocI.end() && top < 20) {
+    while (iterator != veinsDelDocI.end() && top < veins) {
         tp.push_back(iterator->first);
         cout << endl << "Shingles del Document " << iterator->first << " amb Jaccard Similarity " << iterator->second << "%" << endl;
         iterator++;
@@ -276,7 +276,7 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
     cout << endl <<"Els top " << veins << " més similars al document " << docid << " son:" << endl;
     int top = 0;
     map<int, int, comp2>::iterator it = veinsDelDocI.begin();
-    while (it != veinsDelDocI.end() && top < 20) {
+    while (it != veinsDelDocI.end() && top < veins) {
         cout << endl <<"Signatures del Document " << it->first << " amb Jaccard Similarity " << it->second << "%" << endl;
         sigpos.push_back(it->first);
         ++it;
