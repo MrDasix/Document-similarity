@@ -1,0 +1,10 @@
+{
+        "files.associations": {
+                "xstring": "cpp",
+                "filesystem": "cpp",
+                "map": "cpp",
+                "set": "cpp",
+                "list": "cpp",
+                "algorithm": "cpp"
+        }
+}
