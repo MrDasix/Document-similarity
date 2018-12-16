@@ -1,4 +1,0 @@
-g++ documentGenertator.cpp -o generator
-g++ -std=c++17 A.cpp -o A -lstdc++fs
-./generator
-./A

@@ -17,8 +17,8 @@
 namespace fs = std::experimental::filesystem::v1;
 using namespace std;
 
-const bool DEBUG = 0;
-const int shingleSize = 5 ;
+const bool DEBUG = 1;
+const int shingleSize = 2 ;
 
 map<int,vector<string> > docsInfo;
 map<int, set<string> > docsAsShingleSets_String;
@@ -203,9 +203,9 @@ void JaccardSimilarity(int docid, int veins, map<int, set<int> >& docsAsShingleS
 
     cout << endl << "Comparant Shingles..." << endl;
     cout << endl << "Els top " << veins << " documents més similars al document " << iti->first << " son: " << endl;
-
+    int top = 0;
     map<int,int>::iterator iterator= veinsDelDocI.begin();
-    while (iterator != veinsDelDocI.end()) {
+    while (iterator != veinsDelDocI.end() && top < 20) {
         tp.push_back(iterator->first);
         cout << endl << "Shingles del Document " << iterator->first << " amb Jaccard Similarity " << iterator->second << "%" << endl;
         iterator++;
@@ -274,9 +274,9 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
     vector<int> sigpos;
     cout << endl << "Comparant Signatures" << endl;
     cout << endl <<"Els top " << veins << " més similars al document " << docid << " son:" << endl;
-
+    int top = 0;
     map<int, int, comp2>::iterator it = veinsDelDocI.begin();
-    while (it != veinsDelDocI.end()) {
+    while (it != veinsDelDocI.end() && top < 20) {
         cout << endl <<"Signatures del Document " << it->first << " amb Jaccard Similarity " << it->second << "%" << endl;
         sigpos.push_back(it->first);
         ++it;
