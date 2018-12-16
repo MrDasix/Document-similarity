@@ -8,8 +8,8 @@ using Random = effolkronium::random_static;
 using namespace std;
 
 vector<string> words;
-const int numFiles = 20;
-const int docLength = 50;
+int numFiles = 20;
+int docLength = 50;
 
 void crearFiles(){
         for(int i = 0; i < numFiles; i++){
@@ -26,7 +26,17 @@ void crearFiles(){
 }
 
 int main ()
-{                       
+{          
+        cout << "Assegurat de tindre el directopry 'docs' creat" << endl << endl;
+
+        cout << "Introdueix el número de documents que vols crear: ";             
+        cin >> numFiles ;
+        cout << endl;
+
+        cout << "Introdueix el numero de parauless que vols que tingui cada document: ";
+        cin >> docLength;
+        cout << endl;
+
        ifstream input( "paraules.txt" );
        for(string line; getline( input, line ); )
         {

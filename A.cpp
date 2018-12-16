@@ -21,7 +21,7 @@ using namespace std;
 
 const bool DEBUG = 0; //Si vols treure missatges dels documents per pantalla
 const bool SHINGLE_WORDS = 0; //1 si es volen agafar com a shingel paraules, 0 si es vol agafar com a shingle caracters
-const int shingleSize = 5;
+int shingleSize = 5;
 
 map<int,vector<string> > docsInfo_String;
 map<int,string > docsInfo_Char;
@@ -99,7 +99,7 @@ void convertirShingles(){
 										numShingles++;
                                         docsAsShingleSets_String[i].insert(shingle);//string shingle
 
-                                        hash<std::string> hasher;
+                                        hash<string> hasher;
                                         unsigned long hashed = hasher(shingle);
                                         int abbreviated_hash = hashed & INT_MAX;
                                         docsAsShingleSets[i].insert(abbreviated_hash);//int hashed shingle
@@ -162,7 +162,6 @@ void inputJaccardSimilarity(int &docid, int& veins, int numDocs) {
     while (!b) {
         cout << "\nIntrodueix la id del document que t'interessa: (Dintre del rang [1-" << numDocs << "])" << endl;
         cin >> docid;
-        cout << "input " << docid << endl;
         if (docid <= 0 || docid > numDocs) cout << "\nLa id introduida está fora de rang..." << endl;
         else b = true;
     }
@@ -214,8 +213,6 @@ void JaccardSimilarity(int docid, int veins, map<int, set<int> >& docsAsShingleS
             JSim[getTriangleIndex(iti->first,itj->first,docsAsShingleSets)] = interseccio.size() / double(unio.size());
             double percsimilar = JSim[getTriangleIndex(iti->first,itj->first,docsAsShingleSets)] * 100;
             if (percsimilar > 0) {
-                std::fixed;
-                cout.precision(2);
                 cout << "\t" << iti->first << "\t --> " << itj->first << "\t " << percsimilar << "%" << endl;
                 veinsDelDocI[itj->first] = percsimilar;
             }
@@ -234,14 +231,12 @@ void JaccardSimilarity(int docid, int veins, map<int, set<int> >& docsAsShingleS
     }
     sort(vtop.begin(), vtop.end(), comp);
     for (int top = 0; top < veins; ++top) {
-        std::fixed;
-        cout.precision(2);
         cout << endl << "Shingles del Document " << vtop[top].first << " amb Jaccard Similarity " << vtop[top].second << "%" << endl;
     }
  
-    double elapsed_secs = double (clock()-t0) / CLOCKS_PER_SEC;
+    double elapsed_secs = double (clock()-t0);
  
-    cout << endl << "Ha tardat " << elapsed_secs << " segons en calcular totes les Jaccard Similarities de Shingles" << endl;
+    cout << endl << "Ha tardat " << elapsed_secs << " milisegons en calcular totes les Jaccard Similarities de Shingles" << endl << endl << endl;
     //cout << "Tot i que tarda més que amb k-shingles o minhash o lsh, aquests percentatges son els reals" << endl;
 }
  
@@ -306,7 +301,7 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
     vector<pair<int, double>> vtop;
 
     while (it != veinsDelDocI.end()) {
-        cout << endl <<"Signatures del Document " << it->first << " amb Jaccard Similarity " << it->second << "%" << endl;
+        //cout << endl <<"Signatures del Document " << it->first << " amb Jaccard Similarity " << it->second << "%" << endl;
         sigpos.push_back(it->first);
         vtop.push_back(make_pair(it->first, it->second));
         ++it;
@@ -314,19 +309,17 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
  
     sort(vtop.begin(), vtop.end(), comp);	
     for (int top = 0; top < veins; ++top) {
-        std::fixed;
-        cout.precision(2);
-        cout << endl << "Shingles del Document " << vtop[top].first << " amb Jaccard Similarity " << vtop[top].second << "%" << endl;
+        cout << endl << "Signatures del Document " << vtop[top].first << " amb Jaccard Similarity " << vtop[top].second << "%" << endl;
     }
  
     set<int> s(tp.begin(), tp.end());
     set<int> inters;
     set_intersection(tp.begin(), tp.end(), sigpos.begin(), sigpos.end(), inserter(inters, inters.begin()));
-    fpsig = veins - inters.size();
-    tpsig = veins - fpsig;
+    fpsig = signatures.size() - inters.size();
+    tpsig = signatures.size() - fpsig;
     double elapsed = clock() - t0;
-    cout << endl << tpsig << "/" << veins << " True Positives i " << fpsig << "/" << veins << " False Positives Generats al comparar signatures." << endl;
-    cout << endl << "Ha tardat " << elapsed << " secons en calcular Jaccard Similarity amb Signatures." << endl;
+    cout << endl << tpsig << "/" << signatures.size() << " True Positives i " << fpsig << "/" << signatures.size() << " False Positives Generats al comparar signatures." << endl;
+    cout << endl << "Ha tardat " << elapsed << " milisegons en calcular Jaccard Similarity amb Signatures." << endl << endl << endl;
 }
 
 
@@ -457,9 +450,10 @@ set<pair<int,int>> getSimilarDocs(vector<vector<int>> docs, map<int, set<int>> s
 void LHS(){
     int band_size;
     do{ 
-		cout << "introdueix el band size" << endl;
+		cout << "introdueix el band size (major a 0 e inferior a "<< numHashes <<" )" << endl;
 		cin >> band_size;
-	}while(band_size > 0 and band_size <= numHashes);
+	}while(!(band_size > 0 && band_size <= numHashes));
+
     vector<int> tlist;
     set<pair<int,int>> similar_docs = getSimilarDocs(signatures, docsAsShingleSets, 0, numHashes, band_size);
 
@@ -468,23 +462,26 @@ void LHS(){
     cout << similarity << endl;
 }
 
-
-
 int main()
 {
+	cout.setf( std::ios::fixed);
+	cout.precision(2);
+
+        cout << "Introdueix el tamany dels shingles" << endl;
+        cin >> shingleSize;
+
 	llegirDocuments();
 	convertirShingles();
-
-	cout << "Introdueix el numero de hashes." << endl;
-	cin >> numHashes;
-	minHashing();
 
 	int docid;
 	int veins;
 
 	inputJaccardSimilarity(docid, veins, docNames.size());
 	JaccardSimilarity(docid, veins, docsAsShingleSets, docNames, tp);
-	displayAllSignaturesISimilaritat(signatures, docid, veins, docsAsShingleSets, tp, numHashes);
 
-	LHS();
+        cout << "Introdueix el numero de hashes." << endl;
+	cin >> numHashes;
+	minHashing();
+
+	displayAllSignaturesISimilaritat(signatures, docid, veins, docsAsShingleSets, tp, numHashes);
 }
