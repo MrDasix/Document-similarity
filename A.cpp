@@ -33,6 +33,11 @@ vector<int> tp;
 vector<vector<int> > signatures;
 map<int, set<int> > neighbors_of_document;
 
+unsigned int bandes, files;
+double thresholdLHS;
+map<pair<int,int>, double> candidates;
+
+
 vector<string> split(const string& s, char delimiter)
 {
 	vector<string> tokens;
@@ -167,7 +172,7 @@ void inputJaccardSimilarity(int &docid, int& veins, int numDocs) {
     }
     b = false;
     while (!b) {
-        cout << "\nIntrodueix el número de veins propers/similars que vols trobar:" << endl;
+        cout << "\nIntrodueix el número de veins propers/similars que vols trobar: (Numero > 0 i < " << docNames.size() -1 << ")" << endl;
         cin >> veins;
         if (veins <= 0) cout << "\nHa de ser un número positiu...";
         else b = true;
@@ -447,19 +452,66 @@ set<pair<int,int>> getSimilarDocs(vector<vector<int>> docs, map<int, set<int>> s
     return similar_docs;
 }
 
+void inicialitzaValors(){
+    cout << "Introdueix el nombre de bandes a usar: " << endl;
+    cin >> bandes;
+    cout << "Introdueix el nombre de files per banda: " << endl;
+    cin >> files;
+    cout << "El nombre de funcions de hash a utilitzar serà " << bandes*files << endl;
+    thresholdLHS = pow((1 / double(bandes)), (1 / double(files)));
+    cout << "Introdueix el treshold a utilitzar: (Introdueix 0 per usar l'autocalculat: " << thresholdLHS << ")" << endl;
+    double aux;
+    cin >> aux;
+    if(aux != 0) thresholdLHS = aux;
+}
+ 
+double jaccard(int A, int B){
+    double value = 0;
+    for(int i = 0; i < numHashes; ++i){
+        if(signatures[i][A] == signatures[i][B]) ++value;
+    }
+    return (value / double(numHashes));
+}
+ 
 void LHS(){
-    int band_size;
-    do{ 
-		cout << "introdueix el band size (major a 0 e inferior a "<< numHashes <<" )" << endl;
-		cin >> band_size;
-	}while(!(band_size > 0 && band_size <= numHashes));
-
-    vector<int> tlist;
-    set<pair<int,int>> similar_docs = getSimilarDocs(signatures, docsAsShingleSets, 0, numHashes, band_size);
-
-    float r = float(numHashes) / float(band_size);
-    float similarity = pow((1 / r),(1 / float(band_size)));
-    cout << similarity << endl;
+    inicialitzaValors();
+    vector<vector<int>> buckets(bandes, vector<int>(docNames.size()));
+ 
+    hash<string> hash1;
+    for(int band = 0; band < bandes; ++band){
+        for(int doc = 0; doc < docNames.size(); ++doc){
+            char aux[files];
+            for (int row = 0; row < files; row++) {
+                aux[row] = signatures[band*files+row][doc];
+            }
+            //at this point, a single row is computed.
+            string aux1 = aux;
+            buckets[band][doc] = hash1(aux1);
+        }
+    }
+ 
+    for(int band = 0; band < bandes; ++band){
+        for(int i = 0; i < docNames.size(); ++i){
+            for(int j = i+1; j < docNames.size(); ++j){
+                if(buckets[band][i] == buckets[band][j]){
+                    pair<int,int> p(i,j);
+                    candidates[p] = 0;
+                    cout << "CANDIDATES" << endl;
+                }
+            }
+        }
+    }
+ 
+    cout << "Similars: " << endl;
+    int fals = 0;
+    for(pair<pair<int,int>,double> entry: candidates){
+        entry.second = jaccard(entry.first.first, entry.first.second);
+        if(entry.second >= thresholdLHS){
+            cout << "Similitud entre " << entry.first.first << " i " << entry.first.second << ": " << entry.second << endl;
+        }
+        else ++fals;
+    }
+    cout << "Hi ha hagut " << fals << " de " << candidates.size() << " falsos positius" << endl; 
 }
 
 int main()
@@ -470,18 +522,20 @@ int main()
         cout << "Introdueix el tamany dels shingles" << endl;
         cin >> shingleSize;
 
+        cout << "Introdueix el numero de hashes." << endl;
+	cin >> numHashes;
+
 	llegirDocuments();
 	convertirShingles();
+
+        minHashing();
 
 	int docid;
 	int veins;
 
 	inputJaccardSimilarity(docid, veins, docNames.size());
 	JaccardSimilarity(docid, veins, docsAsShingleSets, docNames, tp);
+        displayAllSignaturesISimilaritat(signatures, docid, veins, docsAsShingleSets, tp, numHashes);
 
-        cout << "Introdueix el numero de hashes." << endl;
-	cin >> numHashes;
-	minHashing();
-
-	displayAllSignaturesISimilaritat(signatures, docid, veins, docsAsShingleSets, tp, numHashes);
+        LHS();
 }
