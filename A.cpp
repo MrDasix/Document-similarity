@@ -153,17 +153,7 @@ int getTriangleIndex(int i, int j, map<int, set<int> >& docsAsShingleSets) {
 }
 
 // mirar si funciona
-struct comp {
-    bool operator() (const int& a, const int& b) const {
-        return a > b;
-    }
-};
-
-struct comp2 {
-    bool operator() (const int& a, const int& b) const {
-        return a > b;
-    }
-};
+bool comp (const pair<int, double>& a, const pair<int,double>& b) { return a.second > b.second; }
 
 void inputJaccardSimilarity(int &docid, int& veins, int numDocs) {
     bool b = false;
@@ -186,27 +176,27 @@ void inputJaccardSimilarity(int &docid, int& veins, int numDocs) {
 void JaccardSimilarity(int docid, int veins, map<int, set<int> >& docsAsShingleSets, set<int>& docNames, vector<int>& tp) {
     // Numero d'elements que necessita la matriu Triangle
     int numElems = (docsAsShingleSets.size() * docsAsShingleSets.size() - 1) / 2;
-
+ 
     // JSim els valors reals de Jaccard Similarity
     vector<double> JSim (numElems);
-
+ 
     ///////////////////      Jaccard Similarities
-
+ 
     cout << endl << endl << "Calculant Jaccard Similarities del Shingles..." << endl;
-
+ 
     clock_t t0 = clock();
-
+ 
     map<int, set<int> >::iterator first = docsAsShingleSets.begin();
-
+ 
     int i = docid;
-
+ 
     // com un loading progress cada 100 documents
     //if (i % 100 == 0) cout << "     (" << i << "/" << docAsShingleSets.size() << ")" << endl;
-
+ 
     map<int, set<int> >::iterator iti = docsAsShingleSets.find(i);
     set<int> s1 = docsAsShingleSets[iti->first];
-    map<int, int, comp> veinsDelDocI;           // ordenats pel major percentatge
-
+    map<int, double> veinsDelDocI;           // ordenats pel major percentatge
+ 
     map<int, set<int> >::iterator itj = docsAsShingleSets.begin();
     while (itj != docsAsShingleSets.end()) {
         if (itj->first != iti->first) {
@@ -215,64 +205,69 @@ void JaccardSimilarity(int docid, int veins, map<int, set<int> >& docsAsShingleS
             // Calcula i guarda el Jaccard similarity
             set<int> interseccio;
             set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), /*back_*/inserter(interseccio, interseccio.begin()));
-
+ 
             set<int> unio;
             set_union(s1.begin(), s1.end(), s2.begin(), s2.end(), /*back_*/inserter(unio, unio.begin()));
-
+ 
             JSim[getTriangleIndex(iti->first,itj->first,docsAsShingleSets)] = interseccio.size() / double(unio.size());
             double percsimilar = JSim[getTriangleIndex(iti->first,itj->first,docsAsShingleSets)] * 100;
             if (percsimilar > 0) {
                 std::fixed;
                 cout.precision(2);
-                cout << "\t" << iti->first << "\t --> " << itj->first << "\t" << percsimilar << "%" << endl;
+                cout << "\t" << iti->first << "\t --> " << itj->first << "\t " << percsimilar << "%" << endl;
                 veinsDelDocI[itj->first] = percsimilar;
             }
         }
         ++itj;
     }
-
+ 
     cout << endl << "Comparant Shingles..." << endl;
     cout << endl << "Els top " << veins << " documents més similars al document " << iti->first << " son: " << endl;
-    int top = 0;
-    map<int,int>::iterator iterator= veinsDelDocI.begin();
-    while (iterator != veinsDelDocI.end() && top < veins) {
+    map<int,double>::iterator iterator= veinsDelDocI.begin();
+    vector< pair<int, double> > vtop;
+    while (iterator != veinsDelDocI.end()) {
         tp.push_back(iterator->first);
-        cout << endl << "Shingles del Document " << iterator->first << " amb Jaccard Similarity " << iterator->second << "%" << endl;
+        vtop.push_back(make_pair(iterator->first, iterator->second));
         iterator++;
-        top++;
     }
-
+    sort(vtop.begin(), vtop.end(), comp);
+    for (int top = 0; top < veins; ++top) {
+        std::fixed;
+        cout.precision(2);
+        cout << endl << "Shingles del Document " << vtop[top].first << " amb Jaccard Similarity " << vtop[top].second << "%" << endl;
+    }
+ 
     double elapsed_secs = double (clock()-t0) / CLOCKS_PER_SEC;
-
+ 
     cout << endl << "Ha tardat " << elapsed_secs << " segons en calcular totes les Jaccard Similarities de Shingles" << endl;
     //cout << "Tot i que tarda més que amb k-shingles o minhash o lsh, aquests percentatges son els reals" << endl;
-
-    // Esborrar JSim aqui si causa problemes de ram
 }
-
+ 
 void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int docid, int veins, map<int, set<int> >& docsAsShingleSets, vector<int>& tp, int numHashes) {
     cout << endl << "Numero de signatures: " << signatures.size(); // list signatures size
-
+ 
     int numElems = (docsAsShingleSets.size() * docsAsShingleSets.size() - 1) / 2;
     // estJSim els valors estimats de Jaccard Similarity comparant amb MinHash signatures
     vector<double> estJSim (numElems);
-
+ 
     int tpsig = 0;  // true positives
     int fpsig = 0;  // false positives
-
+ 
     clock_t t0 = clock();
-
+ 
     double threshold = 0;
     cout << endl <<"Jaccard Similarity entre signatures" << endl;
     cout << endl <<"Els valors mostrats son els valors estimats de Jaccard Similarity" << endl;
-
-
+ 
+ 
     int i = docid;
     vector<int> signature1 = signatures[i];
-    map<int, int, comp2> veinsDelDocI;  // veins ordenats per major percentatge de similitud
+ 
+    map<int, double> veinsDelDocI;  // veins ordenats per major percentatge de similitud
+ 
     map<int, set<int> >::iterator itj = docsAsShingleSets.begin();
-
-	while(itj != docsAsShingleSets.end()) {
+ 
+    while(itj != docsAsShingleSets.end()) {
         if (i != itj->first) {
             vector<int> signature2 = signatures[itj->first];
             // contem quantes posicions del minhash son iguals
@@ -280,13 +275,13 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
             for (int k = 0; k < numHashes; ++k) {
                 if (signature1[k] == signature2[k]) ++count;
             }
-
+ 
             estJSim[getTriangleIndex(i, itj->first, docsAsShingleSets)] = (count / float(numHashes));
-
+ 
             if (estJSim[getTriangleIndex(i,itj->first,docsAsShingleSets)] > 0) {
                 set<int> s1 (signature1.begin(), signature1.end());
                 set<int> s2 (signature2.begin(), signature2.end());
-
+ 
                 set<int> interseccio;
                 set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), inserter(interseccio, interseccio.begin()));
                 set<int> unio;
@@ -294,26 +289,34 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
                 double p = (interseccio.size() / float(unio.size()));
 
                 if (double(p) > threshold) {
-                    double percsimilar = estJSim[getTriangleIndex(i,itj->first,docsAsShingleSets)] * 100;
+                    double percsimilar = estJSim[getTriangleIndex(i,itj->first,docsAsShingleSets)] * 100;					
                     veinsDelDocI[itj->first] = p * 100;
                 }
             }
         }
-		++itj;
+        ++itj;
     }
-
+ 
     vector<int> sigpos;
     cout << endl << "Comparant Signatures" << endl;
     cout << endl <<"Els top " << veins << " més similars al document " << docid << " son:" << endl;
-    int top = 0;
-    map<int, int, comp2>::iterator it = veinsDelDocI.begin();
-    while (it != veinsDelDocI.end() && top < veins) {
+    map<int, double>::iterator it = veinsDelDocI.begin();
+    vector<pair<int, double>> vtop;
+
+    while (it != veinsDelDocI.end()) {
         cout << endl <<"Signatures del Document " << it->first << " amb Jaccard Similarity " << it->second << "%" << endl;
         sigpos.push_back(it->first);
+        vtop.push_back(make_pair(it->first, it->second));
         ++it;
-        top++;
     }
-
+ 
+    sort(vtop.begin(), vtop.end(), comp);	
+    for (int top = 0; top < veins; ++top) {
+        std::fixed;
+        cout.precision(2);
+        cout << endl << "Shingles del Document " << vtop[top].first << " amb Jaccard Similarity " << vtop[top].second << "%" << endl;
+    }
+ 
     set<int> s(tp.begin(), tp.end());
     set<int> inters;
     set_intersection(tp.begin(), tp.end(), sigpos.begin(), sigpos.end(), inserter(inters, inters.begin()));
@@ -469,6 +472,8 @@ int main()
 	llegirDocuments();
 	convertirShingles();
 
+	cout << "Introdueix el numero de hashes." << endl;
+	cin >> numHashes;
 	minHashing();
 
 	int docid;
