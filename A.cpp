@@ -40,8 +40,8 @@ vector<string> split(const string& s, char delimiter)
 	istringstream tokenStream(s);
 	while (getline(tokenStream, token, delimiter))
 	{
-                if(token.size() > 0 &&  token != " "){
-                        token.erase(remove(token.begin(), token.end(), ' '), token.end());
+        if(token.size() > 0 &&  token != " "){
+            token.erase(remove(token.begin(), token.end(), ' '), token.end());
 			tokens.push_back(token);     
 		} 
 	}
@@ -96,6 +96,7 @@ void convertirShingles(){
                                                 //if(j != 0 ) shingle += " ";
                                                 shingle += docsInfo_String[i][k+j];
                                         }
+										numShingles++;
                                         docsAsShingleSets_String[i].insert(shingle);//string shingle
 
                                         hash<std::string> hasher;
@@ -112,6 +113,7 @@ void convertirShingles(){
                                                 //if(j != 0 ) shingle += " ";
                                                 shingle += docsInfo_Char[i][k+j];
                                         }
+										numShingles++;
                                         docsAsShingleSets_String[i].insert(shingle);//string shingle
 
                                         hash<std::string> hasher;
@@ -361,6 +363,7 @@ vector<int> obteCoeficients(int n) {
     }
     return coeficients;
 }
+
 void minHashing() {
     int primerPrimer = getPrimerPrimer();
     vector<int> coeficients1 = obteCoeficients(numHashes), coeficients2 = obteCoeficients(numHashes);
