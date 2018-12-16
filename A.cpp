@@ -13,11 +13,13 @@
 #include <time.h>
 #include <math.h>
 #include <experimental/filesystem>
+#include "random.hpp"
 
+using Random = effolkronium::random_static;
 namespace fs = std::experimental::filesystem::v1;
 using namespace std;
 
-const bool DEBUG = 1;
+const bool DEBUG = 0;
 const int shingleSize = 2 ;
 
 map<int,vector<string> > docsInfo;
@@ -27,6 +29,7 @@ set<int> docNames;
 int numShingles, numHashes;
 vector<int> tp; 
 vector<vector<int> > signatures;
+map<int, set<int> > neighbors_of_document;
 
 vector<string> split(const string& s, char delimiter)
 {
@@ -294,6 +297,7 @@ void displayAllSignaturesISimilaritat(vector<vector<int> >& signatures, int doci
     cout << endl << "Ha tardat " << elapsed << " secons en calcular Jaccard Similarity amb Signatures." << endl;
 }
 
+
 bool esPrimer(int numero) {
     if(numero < 2)
         return false;
@@ -308,51 +312,136 @@ bool esPrimer(int numero) {
     }
     return true;
 }
-
 int getPrimerPrimer() {
     int i;
     for(i=1; not esPrimer(numShingles+i); ++i);
     return numShingles+i;
 }
-
 bool conte(vector<int> vec, int n){
-    for(int i=0; i<vec.size(); ++i){
-        if(vec[i] == n) return true;
+    for (int i : vec) {
+        if(i == n) return true;
     }
     return false;
 }
-
 vector<int> obteCoeficients(int n) {
-    srand(time(0));
     vector<int> coeficients;
     while(coeficients.size() < n){
-        int r = rand()%numShingles;
+        int r = Random::get()%numShingles;
         if(not conte(coeficients, r)) coeficients.push_back(r);
     }
     return coeficients;
 }
+void minHashing() {
+    int primerPrimer = getPrimerPrimer();
+    vector<int> coeficients1 = obteCoeficients(numHashes), coeficients2 = obteCoeficients(numHashes);
+    vector<vector<int>> signatures;
+    for(int docId: docNames){
+        set<int> shingles = docsAsShingleSets[docId];
+        vector<int> signatura;
+        for(int i=0; i<numHashes; ++i){
+            int minHashCode = primerPrimer + 1;
+            for(int shingle: shingles){
+                int hashCode = (coeficients1[i] * shingle + coeficients2[i]) % primerPrimer;
+                if(hashCode < minHashCode) minHashCode = hashCode;
+            }
+            signatura.push_back(minHashCode);
+        }
+        signatures.push_back(signatura);
+    }
+}
+
+vector<int> getBandHashes(const vector<int> &minhash_row, int band_size){
+    vector<int> band_hashes;
+    int band_hash;
+    for(int i=0; i<minhash_row.size(); ++i){
+        if(i % band_size == 0){
+            if(i > 0) band_hashes.push_back(band_hash);
+            band_hash = 0;
+        }
+        band_hash += hash<int>{}(minhash_row[i]);
+    }
+    return band_hashes;
+}
+
+vector<pair<int,int>> makePairs(const vector<int> &vect){
+    vector<pair<int,int>> pairs(0);
+    for(int i=0; i<vect.size(); ++i){
+        for(int j=i; j<vect.size(); ++j){
+            pairs.emplace_back(vect[i],vect[j]);
+        }
+    }
+    return pairs;
+}
+
+set<pair<int,int>> getSimilarDocs(vector<vector<int>> docs, map<int, set<int>> shingles, int threshold, int n_hashes, int band_size){
+    map<int, vector<int>> lshsignatures;
+    map<int, vector<vector<int>>> hash_bands;
+    int docNum = 0;
+    vector<string> random_strings(static_cast<unsigned int>(n_hashes));
+    int w = 0;
+    for(const vector<int> &doc: docs){
+        lshsignatures[w] = doc;
+        vector<int> minhash_row = doc;
+        vector<int> band_hashes = getBandHashes(minhash_row, band_size);
+        ++w;
+        int docMember = docNum;
+        for(int i=0; i<band_hashes.size(); ++i){
+            hash_bands[i][band_hashes[i]].push_back(docMember);
+        }
+        ++docNum;
+    }
+    set<pair<int,int>> similar_docs;
+    vector<int> similarity;
+    int noPairs = 0;
+    vector<int> sameBucketLSH;
+    int sameBucketCount = 0;
+    for(auto& [key, value]: hash_bands){
+        for(vector<int> hash_num: value){
+            if(hash_num.size() > 1){
+                for(pair<int,int> pair1: makePairs(hash_num)){
+                    if(similar_docs.count(pair1) == 0){
+                        similar_docs.insert(pair1);
+                        set<int> s1(lshsignatures[pair1.first].begin(), lshsignatures[pair1.first].end());
+                        set<int> s2(lshsignatures[pair1.second].begin(), lshsignatures[pair1.second].end());
+
+                        set<int> intersect, uni;
+                        set_intersection(s1.begin(),s1.end(),s2.begin(),s2.end(),inserter(intersect,intersect.begin()));
+                        set_union(s1.begin(),s1.end(),s2.begin(),s2.end(),inserter(uni,intersect.begin()));
+
+                        int sim = intersect.size() / uni.size();
+                        if(sim > threshold) noPairs++;
+                        int percsim = (sim > threshold)? sim * 100 : 0;
+                        neighbors_of_document[pair1.second].insert(percsim);
+                        sameBucketLSH.push_back(pair1.second);
+                        sameBucketCount++;
+                    }
+                }
+            }
+        }
+    }
+    return similar_docs;
+}
+
+void LHS(){
+    int band_size;
+    do cin >> band_size;
+    while(band_size > 0 and band_size <= numHashes);
+    vector<int> tlist;
+    set<pair<int,int>> similar_docs = getSimilarDocs(signatures, docsAsShingleSets, 0, numHashes, band_size);
+
+    float r = float(numHashes) / float(band_size);
+    float similarity = pow((1 / r),(1 / float(band_size)));
+    cout << similarity << endl;
+}
+
+
 
 int main()
 {
 	llegirDocuments();
 	convertirShingles();
 
-        int primerPrimer = getPrimerPrimer();
-        vector<int> coeficients1 = obteCoeficients(numHashes), coeficients2 = obteCoeficients(numHashes);
-        vector<vector<int>> signatures;
-        for(int docId: docNames){
-                set<int> shingles = docsAsShingleSets[docId];
-                vector<int> signatura;
-                for(int i=0; i<numHashes; ++i){
-                        int minHashCode = primerPrimer + 1;
-                        for(int shingle: shingles){
-                                int hashCode = (coeficients1[i] * shingle + coeficients2[i]) % primerPrimer;
-                                if(hashCode < minHashCode) minHashCode = hashCode;
-                        }
-                        signatura.push_back(minHashCode);
-                }
-                signatures.push_back(signatura);
-        }
+        minHashing();
 
         int docid;
         int veins;
